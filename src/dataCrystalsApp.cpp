@@ -411,7 +411,9 @@ unsigned long dataCrystalsApp::loadCSVData(string filename, datum *dataPtr) {
         (dataPtr+i-1)->setValues(   pointX,
                                     pointY,
                                     0,
-                                    1.0/20.0f);
+                                    xScale/20.0f,
+                                    xScale/20.0f,
+                                    zScale/5);
         
         
     }
@@ -517,7 +519,7 @@ void dataCrystalsApp::loadAllData() {
             else if( currentFileIndex == 3 )
                 (lastDataPtr + j)->setColor(0,255,255);
             
-            (lastDataPtr + j)->adjustValues(0,0, currentFileIndex * 50);
+            (lastDataPtr + j)->adjustValues(0,0, currentFileIndex * 50 * zScale);
         }
     }
     
@@ -606,9 +608,9 @@ void dataCrystalsApp::initGui() {
     gui.add(jiggleSlider.setup("jiggle", jigglePct,.1,3.0));
    
     //-- SCALING NOT ACTUALLY WORKING
-//    gui.add(xScaleSlider.setup( "x scale", xScale, .25, 4 ));
+    gui.add(xScaleSlider.setup( "x scale", xScale, .25, 4 ));
 //    gui.add(yScaleSlider.setup( "y scale", yScale, .25, 4 ));
-//    gui.add(zScaleSlider.setup( "z scale", zScale, .25, 4 ));
+    gui.add(zScaleSlider.setup( "z scale", zScale, .25, 4 ));
 
     //    //gui.add(applyButton.setup("apply scale" ));
     
@@ -638,9 +640,9 @@ void dataCrystalsApp::xScaleChanged(float & val){
     xScale = val;
     
     // 3nd pass: make adjustments averages for x, y and z
-    for( unsigned long i = 0; i < numData; i++ ) {
-        (data+i)->scaleValues( xScale, yScale, zScale );
-    }
+//    for( unsigned long i = 0; i < numData; i++ ) {
+//        (data+i)->scaleValues( xScale, yScale, zScale );
+//    }
 
 }
 

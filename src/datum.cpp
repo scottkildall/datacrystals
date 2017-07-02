@@ -32,12 +32,12 @@ void datum::setSize( float _s  ) {
 }
 
 
-void datum::setValues( float _x, float _y, float _z, float initialScale  ) {
+void datum::setValues( float _x, float _y, float _z, float xScale, float yScale, float zScale ) {
     x = _x;
     y = _y;
     z = _z;
     
-    makeForm(initialScale,initialScale,initialScale);
+    makeForm(xScale,yScale,zScale);
 }
 
 

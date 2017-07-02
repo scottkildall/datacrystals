@@ -40,7 +40,7 @@ public:
     void save(ofxSTLExporter &stlExporter);
     
     //-- accessors for (x,y,z), movement and scale
-    void setValues( float _x, float _y, float _z, float initialScale);
+    void setValues( float _x, float _y, float _z, float xScale, float yScale, float zScale);
     void adjustValues( float xAdjust, float yAdjust, float zAdjust  );
     void scaleValues( float xScale, float yScale, float zScale  );
     
