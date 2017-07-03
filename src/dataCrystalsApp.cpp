@@ -13,6 +13,8 @@
 
 #define POINT_X_COLUMN_NUM (2)
 #define POINT_Y_COLUMN_NUM (3)
+#define SIZE_COLUMN_NUM (4)
+
 
 #define CLUSTER_DRAW_X  (50)
 
@@ -26,6 +28,8 @@ void dataCrystalsApp::setup(){
     bClustering = false;
     bShowClusterStatus = true;
     bDrawClusterIDs = false;
+    bUseColor = true;
+    bAllLoaded = true;
     numClusterCycles = 0;
     numChildren = 0;
     numParents = 0;
@@ -230,10 +234,18 @@ bool dataCrystalsApp::inSameCluster( datum *d1, datum *d2 ) {
 bool dataCrystalsApp::inClusterDistance( datum *d1, datum *d2 ) {
     ofVec3f v1, v2;
     
+    float totalSize = d1->getSize() + d2->getSize();
+    float minClusterDist = (totalSize/2) * clusterPct;
+    
+    float shortestSize = (d1->getSize() < d2->getSize()) ? d1->getSize() : d2->getSize();
+//    if( shortestSize < 3 )
+//        cout << "\n";
+    minClusterDist = shortestSize * clusterPct;
+
     d1->getLoc(v1);
     d2->getLoc(v2);
     
-    if( v1.distance(v2)  < 10.0 )
+    if( v1.distance(v2)  < minClusterDist)
         return true;
     else
         return false;
@@ -307,13 +319,25 @@ void dataCrystalsApp::keyPressed(int key){
         saveMesh();
     }
     
+    else if( key == 'c' ) {
+        bUseColor = !bUseColor;
+        
+        if( bAllLoaded && bUseColor )
+            applyColorToAll();
+        else
+            applyColor();
+    }
+    
     else if( key == '.' ) {
         // next CSV file
         currentFileIndex++;
         if( currentFileIndex == numCSVFiles )
             currentFileIndex = 0;
         
-        loadCSVData(csvFiles[currentFileIndex].getFileName(), NULL );
+        loadCSVData(csvFiles[currentFileIndex].getFileName(), NULL, currentFileIndex );
+        
+        applyColor();
+        bAllLoaded = false;
         
     }
     else if( key == ',' ) {
@@ -322,11 +346,15 @@ void dataCrystalsApp::keyPressed(int key){
         if( currentFileIndex == -1 )
             currentFileIndex = numCSVFiles - 1;
         
-        loadCSVData(csvFiles[currentFileIndex].getFileName(), NULL );
+        loadCSVData(csvFiles[currentFileIndex].getFileName(), NULL, currentFileIndex );
+        
+        applyColor();
+        bAllLoaded = false;
     }
     
     else if( key == 'a' ) {
         loadAllData();
+        bAllLoaded = true;
     }
     else if( key == '1' ) {
         bClustering = !bClustering;
@@ -359,12 +387,13 @@ void dataCrystalsApp::loadCSVFiles() {
     
     //-- load first CSV - will crash if we have no CSV files
     currentFileIndex = 0;
-    loadCSVData(csvFiles[currentFileIndex].getFileName(), NULL);
+    loadCSVData(csvFiles[currentFileIndex].getFileName(), NULL, currentFileIndex);
+    applyColor();
 }
 
 
 
-unsigned long dataCrystalsApp::loadCSVData(string filename, datum *dataPtr) {
+unsigned long dataCrystalsApp::loadCSVData(string filename, datum *dataPtr, int fileIndex) {
     float latTotal = 0;
     float lngTotal = 0;
     float heightTotal = 0;
@@ -397,15 +426,21 @@ unsigned long dataCrystalsApp::loadCSVData(string filename, datum *dataPtr) {
     }
     
     // start at i = 0 to skiip header
+
+    float pointX, pointY, s;
     
-    float pointX, pointY;
     
     // 1st pass: read in CSV, set raw points
     for( unsigned long i = 1; i < csvDataRows+1; i++ ) {
         
         pointX = ofToFloat(csv.data[i][POINT_X_COLUMN_NUM]);
         pointY = ofToFloat(csv.data[i][POINT_Y_COLUMN_NUM]);
-      
+        s = ofToFloat(csv.data[i][SIZE_COLUMN_NUM]);
+        if( s == 0 )
+            s = DEFAULT_CUBE_SIZE;
+        
+        //(dataPtr+i-1)->setSize(s);
+        
         
         // index - 1 for data but [i] for CSV array since we are skipping the header
         (dataPtr+i-1)->setValues(   pointX,
@@ -415,6 +450,7 @@ unsigned long dataCrystalsApp::loadCSVData(string filename, datum *dataPtr) {
                                     xScale/20.0f,
                                     zScale/5);
         
+       
         
     }
     
@@ -463,9 +499,7 @@ unsigned long dataCrystalsApp::loadCSVData(string filename, datum *dataPtr) {
     return csvDataRows;
 }
 
-
 void dataCrystalsApp::loadAllData() {
-    
     // Step 1: count all rows in all CSV files
     numData = 0;
     
@@ -476,8 +510,6 @@ void dataCrystalsApp::loadAllData() {
         string path = ofToDataPath("input/");
         path.append(csvFiles[i].getFileName());
         csv.loadFile(path, ",");
-    
-        
         
         //-- skip header
         numData += (csv.numRows - 1);
@@ -502,28 +534,116 @@ void dataCrystalsApp::loadAllData() {
     for( int i = 0; i < numCSVFiles; i++ ) {
         // Load each file
         currentFileIndex = i;
-        numCSVRows = loadCSVData(csvFiles[currentFileIndex].getFileName(), (dataPtr+dataOffset));
+        numCSVRows = loadCSVData(csvFiles[currentFileIndex].getFileName(), (dataPtr+dataOffset), currentFileIndex);
         dataOffset += numCSVRows;
         
         
         //-- Make data adjustmetns on each set
         datum *lastDataPtr = dataPtr + (dataOffset - numCSVRows);
         
+        unsigned short r, g, b;
+        
+        getColorFromFileIndex(currentFileIndex,r,g,b);
+        
         for( int j = 0; j < numCSVRows; j++ ) {
-            if( currentFileIndex == 0 )
-                (lastDataPtr + j)->setColor(255,0,0);
-            else if( currentFileIndex == 1 )
-                (lastDataPtr + j)->setColor(0,255,0);
-            else if( currentFileIndex == 2 )
-                (lastDataPtr + j)->setColor(0,0,255);
-            else if( currentFileIndex == 3 )
-                (lastDataPtr + j)->setColor(0,255,255);
+            (lastDataPtr + j)->setColor(r,g,b);
             
             (lastDataPtr + j)->adjustValues(0,0, currentFileIndex * 50 * zScale);
         }
     }
+}
+
+void dataCrystalsApp::applyColorToAll() {
+    // Step 1: count all rows in all CSV files
+    unsigned long startIndex = 0;
+    unsigned long endIndex = 0;
+    unsigned long numCSVRows;
+    datum *dataPtr = data;
     
+    wng::ofxCsv csv;
     
+    unsigned short r, g, b;
+    
+    currentFileIndex = 0;
+    for( int i = 0; i < numCSVFiles; i++ ) {
+        string path = ofToDataPath("input/");
+        path.append(csvFiles[i].getFileName());
+        csv.loadFile(path, ",");
+        
+        //-- skip header
+        numCSVRows = (csv.numRows - 1);
+
+        endIndex = startIndex + numCSVRows;
+        
+        getColorFromFileIndex(i,r,g,b);
+        
+        for( int j = startIndex; j < endIndex; j++ ) {
+            (dataPtr + j)->setColor(r,g,b);
+        }
+        
+        startIndex = endIndex;
+    }
+}
+
+//-- more complicated, apply color to each section
+void dataCrystalsApp::getColorFromFileIndex(int fileIndex, unsigned short &r, unsigned short &b, unsigned short &g) {
+    //-- default all to white
+    r = 255; g = 255; b = 255;
+    
+    if( fileIndex == 0 ) {
+        r = 255; g = 0; b = 0;
+    }
+    else if( fileIndex == 1 ) {
+        r = 0; g = 255; b = 0;
+    }
+    else if( fileIndex == 2 ) {
+        r = 0; g = 0; b = 255;
+    }
+    else if( fileIndex == 3 ) {
+        r = 255; g = 255; b = 0;
+    }
+    else if( fileIndex == 4 ) {
+        r = 255; g = 255; b= 255;
+    }
+    else if( fileIndex == 5) {
+        r = 255; g = 0; b= 255;
+    }
+    else if( fileIndex == 6) {
+        r = 128; g = 255; b= 255;
+    }
+    else if( fileIndex == 7) {
+        r = 255; g = 128; b= 128;
+    }
+    else if( fileIndex == 8) {
+        r = 128; g = 0; b= 160;
+    }
+    else if( fileIndex == 9) {
+        r = 45; g = 250; b= 170;
+    }
+    else if( fileIndex == 10) {
+        r = 71; g = 128; b= 241;
+    }
+    else if( fileIndex == 11) {
+        r = 128; g = 0; b= 128;
+    }
+    else {
+        r = 255; g = 255; b = 255;
+    }
+}
+
+
+//-- goes through all data points, applies color (or unapplies) from the current index
+void dataCrystalsApp::applyColor() {
+    unsigned short r = 255;
+    unsigned short g = 255;
+    unsigned short b = 255;
+    
+    if( bUseColor )
+        getColorFromFileIndex(currentFileIndex,r,g,b);
+    
+    for( int i = 0; i < numData; i++ ) {
+        (data + i)->setColor(r,g,b);
+    }
 }
 
 std::string dataCrystalsApp::makePointsStr(unsigned long value) {
@@ -591,26 +711,26 @@ void dataCrystalsApp::dragEvent(ofDragInfo dragInfo){
 
 }
 
-
-
 void dataCrystalsApp::initGui() {
     xScale = 1.0f;
     yScale = 1.0f;
     zScale = 1.0f;
     gravRatio = .9f;
     jigglePct = .5f;
+    clusterPct = .8;
     
     gui.setup(); // most of the time you don't need a name
     
     
     // more sliders here for draw vars?
-    gui.add(gravSlider.setup( "gravity", gravRatio, .1, 1.5 ));
+    gui.add(gravSlider.setup( "gravity", gravRatio, .001, 1.5 ));
     gui.add(jiggleSlider.setup("jiggle", jigglePct,.1,3.0));
    
     //-- SCALING NOT ACTUALLY WORKING
-    gui.add(xScaleSlider.setup( "x scale", xScale, .25, 4 ));
+    gui.add(xScaleSlider.setup( "xy scale", xScale, .25, 4 ));
 //    gui.add(yScaleSlider.setup( "y scale", yScale, .25, 4 ));
     gui.add(zScaleSlider.setup( "z scale", zScale, .25, 4 ));
+    gui.add(clusterPctSlider.setup( "cluster %", clusterPct, .1, .9 ));
 
     //    //gui.add(applyButton.setup("apply scale" ));
     
@@ -620,6 +740,7 @@ void dataCrystalsApp::initGui() {
     gravSlider.addListener(this, &::dataCrystalsApp::gravSliderChanged);
     
     jiggleSlider.addListener(this, &::dataCrystalsApp::jiggleSliderChanged);
+    clusterPctSlider.addListener(this, &::dataCrystalsApp::clusterPctChanged);
     
     xScaleSlider.addListener(this, &::dataCrystalsApp::xScaleChanged);
     yScaleSlider.addListener(this, &::dataCrystalsApp::yScaleChanged);
@@ -653,6 +774,10 @@ void dataCrystalsApp::yScaleChanged(float & val){
 
 void dataCrystalsApp::zScaleChanged(float & val){
     zScale = val;
+}
+
+void dataCrystalsApp::clusterPctChanged(float & val){
+    clusterPct = val;
 }
 
 

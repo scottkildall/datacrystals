@@ -21,6 +21,8 @@
 
 #include "ofxSTLPrimitive.h"
 
+#define DEFAULT_CUBE_SIZE (10)      // edge of cube, in mm
+
 
 class datum  {
 
@@ -32,6 +34,7 @@ public:
     
     //-- size of cube (edge)
     void setSize( float _s  );
+    float getSize() { return s; }
     
     //-- main draw function
     void draw();
@@ -45,7 +48,7 @@ public:
     void scaleValues( float xScale, float yScale, float zScale  );
     
     //-- accessor to change the color (could be moved to the main draw function to optimize)
-    void setColor(int _r, int _b, int _g);
+    void setColor(unsigned short _r, unsigned short _b, unsigned short _g);
     
 //-- cluser ID
     unsigned short getClusterID() { return clusterID; }

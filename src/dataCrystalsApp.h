@@ -42,6 +42,8 @@ class dataCrystalsApp : public ofBaseApp{
         unsigned long numData = 0;
         unsigned short nextClusterID;
         bool bDrawClusterIDs;
+        bool bUseColor;
+        bool bAllLoaded;
     
         ofVec3f gravCenter;
     private:
@@ -50,7 +52,7 @@ class dataCrystalsApp : public ofBaseApp{
     
         void loadCSVFiles();
         void loadAllData();
-        unsigned long loadCSVData(string filename, datum *dataPtr);
+        unsigned long loadCSVData(string filename, datum *dataPtr, int fileIndex);
         void saveMesh();
     
         void makeClusters();
@@ -108,11 +110,18 @@ class dataCrystalsApp : public ofBaseApp{
         float zScale;
         void zScaleChanged(float & val);
     
+        ofxFloatSlider clusterPctSlider;
+        float clusterPct;
+        void clusterPctChanged(float & val);
+    
     
         ofxButton applyButton;
         void applyButtonHit();
     
         // UTILITY
+        void getColorFromFileIndex(int currentFileIndex, unsigned short &r, unsigned short &b, unsigned short &g);
+        void applyColor();
+        void applyColorToAll();
         std::string makePointsStr(unsigned long value);
     
         void drawClusterStatus();

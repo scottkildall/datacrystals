@@ -10,7 +10,6 @@
 
 #include "datum.h"
 
-#define DEFAULT_CUBE_SIZE (10)      // edge of cube, in mm
 
 
 datum::datum() {
@@ -96,13 +95,11 @@ void datum::jiggle(float jigglePct, ofVec3f &gravCenter, float gravRatio) {
 
     float rxMin = -jiggleAmount;
     float rxMax = jiggleAmount;
-    
-    
+
     if( gravCenter.x + x > 0 )
         rxMax = rxMax * gravRatio;
     else if( gravCenter.x + x  < 0 )
         rxMin = rxMin * gravRatio;
-    
     
     float ryMin = -jiggleAmount;
     float ryMax = jiggleAmount;
@@ -119,14 +116,20 @@ void datum::jiggle(float jigglePct, ofVec3f &gravCenter, float gravRatio) {
         rzMax = rzMax * gravRatio;
     else if( gravCenter.z + z < 0 )
         rzMin = rzMin * gravRatio;
+     
+    
+    //-- this will move children
+    //adjustValues(mx,my,mz);
 
     
     float mx = ofRandom(rxMin, rxMax);
     float my = ofRandom(ryMin, ryMax);
     float mz = ofRandom(rzMin, rzMax);
-   
-    //-- this will move children
-    adjustValues(mx,my,mz);
+    
+    float gx = (gravCenter.x - x) * gravRatio/10;
+    float gy = (gravCenter.y - y) * gravRatio/10;
+    float gz = (gravCenter.z - z) * gravRatio/10;
+    adjustValues(mx+gx,my+gy,mz+gz);
 }
 
 bool datum::hasChildren() {
@@ -213,15 +216,16 @@ datum* datum::getTopParent() {
 
 
 void datum::draw() {
-   
+    if( box == NULL ) {
+        // setValues() hasn't been called, just exit - displaying error messages will get crazy cluttered
+        return;
+    }
+    
     ofSetColor(r,g,b);
-//    if( box == NULL )
-//        makeForm(xScale, yScale, zScale );
-//    
     box->draw();
 }
 
-void datum::setColor(int _r, int _b, int _g) {
+void datum::setColor(unsigned short _r, unsigned short _b, unsigned short _g) {
     r = _r;
     b = _b;
     g = _g;
