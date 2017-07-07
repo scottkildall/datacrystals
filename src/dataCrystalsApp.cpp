@@ -328,7 +328,7 @@ void dataCrystalsApp::makeClusterDisplayStrings()
     sprintf(numParentsString, "num parents = %lu", numParents);
     sprintf(numChildrenString, "num children = %lu", numChildren);
     sprintf(numDataString, "num data = %lu", numData);
-    sprintf(maxUnattachedSizeString, "max unnatached size = %lu", maxUnattachedSize);
+    sprintf(maxUnattachedSizeString, "max unnatached size = %d", maxUnattachedSize);
 }
 
 void dataCrystalsApp::formGUIStrings() {
@@ -364,6 +364,24 @@ void dataCrystalsApp::keyPressed(int key){
             applyColor();
     }
     
+    //-- scroll data by data
+    if( key == '1' ) {
+        // next set of trees
+        
+    }
+    else if( key == '2' ) {
+        // previous set of trees
+        
+    }
+    
+    else if( key == 'a' ) {
+        // all trees
+        loadCSVFiles();
+    }
+
+    
+    //-- old file-indexing code
+    /*
     else if( key == '2' ) {
         // next CSV file
         currentFileIndex++;
@@ -389,7 +407,7 @@ void dataCrystalsApp::keyPressed(int key){
     }
     
     //-- not supported now
-    /*
+    
     else if( key == 'a' ) {
         loadAllData();
         bAllLoaded = true;
@@ -459,7 +477,7 @@ void dataCrystalsApp::loadCSVFiles() {
     //-- load first CSV - will crash if we have no CSV files
     currentFileIndex = 0;
     loadCSVData(csvFiles[currentFileIndex].getFileName(), NULL, currentFileIndex);
-    applyColor();
+    //applyColor();
 }
 
 
@@ -496,10 +514,11 @@ unsigned long dataCrystalsApp::loadCSVData(string filename, datum *dataPtr, int 
         cout << "non-null\n";
     }
     
-    // start at i = 0 to skiip header
+    // start at i = 0 to skip header
 
     float pointX, pointY, s;
     int categoryID;
+    unsigned short r,g,b;
     
     // 1st pass: read in CSV, set raw points
     for( unsigned long i = 1; i < csvDataRows+1; i++ ) {
@@ -520,18 +539,19 @@ unsigned long dataCrystalsApp::loadCSVData(string filename, datum *dataPtr, int 
         
         (dataPtr+i-1)->setCategoryType(categoryID);
         
-        cout << "category id = " << categoryID << "\n";
+        //cout << "category id = " << categoryID << "\n";
         
         // index - 1 for data but [i] for CSV array since we are skipping the header
         (dataPtr+i-1)->setValues(   pointX,
                                     pointY,
-                                    0,
+                                    categoryID * 1000,
                                     xScale/20.0f,
                                     xScale/20.0f,
-                                    zScale/5);
+                                    zScale/20.f);
         
-       
-        
+        //-- use categoryIDs instead of colors
+        getColorFromFileIndex(categoryID,r,g,b);
+        (dataPtr+i-1)->setColor(r,g,b);
     }
     
     csv.clear();
