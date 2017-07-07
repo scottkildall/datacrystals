@@ -36,6 +36,9 @@ public:
     void setSize( float _s  );
     float getSize() { return s; }
     
+    void setCategoryType(int _categoryType) { categoryType = _categoryType; }
+    void getCategoryType() { return categoryType; }
+    
     //-- main draw function
     void draw();
     
@@ -56,7 +59,7 @@ public:
     
     
 // calls adjustValues() for random amount on self + followers
-    void jiggle(float jigglePct, ofVec3f &gravCenter, float gravRatio);
+    void jiggle(float jigglePct, int maxJiggleSize, ofVec3f &gravCenter, float gravRatio);
     
 //-- simple accessors
     datum *getParent() { return parent; }
@@ -94,6 +97,8 @@ private:
     
     //-- colors (this should be fixed)
     unsigned short r, g, b;
+    
+    int categoryType;
     
     ofxSTLBoxPrimitive *box;
     

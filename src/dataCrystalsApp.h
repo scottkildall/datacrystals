@@ -41,9 +41,11 @@ class dataCrystalsApp : public ofBaseApp{
         datum *data;
         unsigned long numData = 0;
         unsigned short nextClusterID;
+        int maxUnattachedSize;
         bool bDrawClusterIDs;
         bool bUseColor;
         bool bAllLoaded;
+        bool bUseSizeColumn;
     
         ofVec3f gravCenter;
     private:
@@ -126,6 +128,7 @@ class dataCrystalsApp : public ofBaseApp{
     
         void drawClusterStatus();
         void makeClusterDisplayStrings();
+        void formGUIStrings();
     
         char numClusterCyclesStr[64];
         char numUnattachedStr[64];
@@ -133,4 +136,7 @@ class dataCrystalsApp : public ofBaseApp{
         char numChildrenString[64];
         char numDataString[64];
         char clusterString[64];
+        char maxUnattachedSizeString[64];
+        char sizeOnString[64];
+        char fileDisplayStr[64];
 };

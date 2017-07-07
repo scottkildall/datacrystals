@@ -11,13 +11,15 @@
 #include "dataCrystalsApp.h"
 #include "ofxCsv.h"
 
+#define CATEGORY_TYPE_COLUMN_NUM (1)
 #define POINT_X_COLUMN_NUM (2)
 #define POINT_Y_COLUMN_NUM (3)
 #define SIZE_COLUMN_NUM (4)
 
 
-#define CLUSTER_DRAW_X  (50)
-
+#define CLUSTER_DRAW_X  (20)            // offset from left of screen
+#define CLUSTER_DRAW_Y (160)            // offset from bottom of screen
+#define CLUSTER_DRAW_Y_INCREMENT (18)   // amount between each line
 
 //--------------------------------------------------------------
 void dataCrystalsApp::setup(){
@@ -29,7 +31,8 @@ void dataCrystalsApp::setup(){
     bShowClusterStatus = true;
     bDrawClusterIDs = false;
     bUseColor = true;
-    bAllLoaded = true;
+    bAllLoaded = false;
+    bUseSizeColumn = false;
     numClusterCycles = 0;
     numChildren = 0;
     numParents = 0;
@@ -41,6 +44,8 @@ void dataCrystalsApp::setup(){
     
     gravRatio = .9;
     
+    maxUnattachedSize = DEFAULT_CUBE_SIZE;
+    
     //-- GUI
     drawFont.loadFont("verdana.ttf",14 );
     initGui();
@@ -48,7 +53,11 @@ void dataCrystalsApp::setup(){
     //-- DATA
     loadCSVFiles();
     
+    //-- display strings
+    formGUIStrings();
     
+    //-- go full screen
+    ofToggleFullscreen();
 }
 
 //--------------------------------------------------------------
@@ -76,11 +85,10 @@ void dataCrystalsApp::draw(){
             if( (data+i)->isChild() == true && (data+i)->getParent() == NULL )
                 ;   // cout << "no parent\n";
             else if( (data+i)->isChild() == false )
-                (data+i)->jiggle(jigglePct,gravCenter, gravRatio );
+                (data+i)->jiggle(jigglePct, maxUnattachedSize, gravCenter, gravRatio );
         }
         
         numClusterCycles++;
-       
         
         //--
         if( numUnattached == 0 && numParents == 1 )
@@ -131,7 +139,6 @@ void dataCrystalsApp::draw(){
 //-- go through all and check to see if:
 //-- (1) any unattached to be added to a cluster
 //-- (2) any cluster collision [more complicated]
-
 //-------------------------------------------------------------------------------------------------
 //
 //  Case scenarios, main loop comparing each datum (i) to another datum (j)
@@ -160,7 +167,6 @@ void dataCrystalsApp::makeClusters() {
                 bindClusters( data+i, data+j );
                 break;  // done with this one, exit loop
             }
-            
             
             //-- end for(j loop)
         }
@@ -193,7 +199,6 @@ void dataCrystalsApp::attachToCluster(datum *subCluster, datum *mainCluster) {
     subCluster->setParent(mainCluster);
  //   cout << "exit\n";
  
-
 }
 
 
@@ -238,8 +243,9 @@ bool dataCrystalsApp::inClusterDistance( datum *d1, datum *d2 ) {
     float minClusterDist = (totalSize/2) * clusterPct;
     
     float shortestSize = (d1->getSize() < d2->getSize()) ? d1->getSize() : d2->getSize();
-//    if( shortestSize < 3 )
-//        cout << "\n";
+    if( shortestSize < 3 && (d1->getSize() != d2->getSize()) )
+        cout << "\n";
+    
     minClusterDist = shortestSize * clusterPct;
 
     d1->getLoc(v1);
@@ -255,10 +261,18 @@ void dataCrystalsApp::countParentsAndChildren() {
     numChildren = 0;       // instance var, num children
     numParents = 0;       // instance car, num parents
     
+    maxUnattachedSize = 0;
+    
+    if( maxUnattachedSize == 0 )
+        maxUnattachedSize = 2;
+    
     //cout << "\n-- count --\n";
     
     //-- count parents & children
     for( unsigned long i = 0; i < numData; i++ ) {
+        if( (data+i)->isUnattached() )
+            maxUnattachedSize = ((data+i)->getSize() > maxUnattachedSize ) ? (data+i)->getSize() : maxUnattachedSize;
+        
         if( (data+i)->isChild() ) {
             numChildren++;
             
@@ -271,6 +285,7 @@ void dataCrystalsApp::countParentsAndChildren() {
         //     cout << "parent: " << (data+i)->id << "\n";
             
         }
+    
     }
     
     numUnattached = numData - (numParents + numChildren);
@@ -280,20 +295,27 @@ void dataCrystalsApp::drawClusterStatus() {
     ofSetColor(0,255,0);
     makeClusterDisplayStrings();
     
-    int drawY = ofGetScreenHeight() - 200;
+    int drawY = ofGetScreenHeight() - CLUSTER_DRAW_Y;
     ofDrawBitmapString(numClusterCyclesStr, ofPoint(CLUSTER_DRAW_X, drawY) );
     
-    drawY+= 20;
+    drawY+= CLUSTER_DRAW_Y_INCREMENT;
     ofDrawBitmapString(numUnattachedStr, ofPoint(CLUSTER_DRAW_X, drawY) );
     
-    drawY+= 20;
+    drawY+= CLUSTER_DRAW_Y_INCREMENT;
     ofDrawBitmapString(numParentsString, ofPoint(CLUSTER_DRAW_X, drawY) );
     
-    drawY+= 20;
+    drawY+= CLUSTER_DRAW_Y_INCREMENT;
     ofDrawBitmapString(numChildrenString, ofPoint(CLUSTER_DRAW_X, drawY) );
 
-    drawY+= 20;
+    drawY+= CLUSTER_DRAW_Y_INCREMENT;
     ofDrawBitmapString(numDataString, ofPoint(CLUSTER_DRAW_X, drawY) );
+    
+    drawY += CLUSTER_DRAW_Y_INCREMENT;
+    ofDrawBitmapString(maxUnattachedSizeString, ofPoint(CLUSTER_DRAW_X, drawY) );
+
+    
+    drawY+= CLUSTER_DRAW_Y_INCREMENT;
+    ofDrawBitmapString(sizeOnString, ofPoint(CLUSTER_DRAW_X, drawY) );
 }
 
 
@@ -306,14 +328,28 @@ void dataCrystalsApp::makeClusterDisplayStrings()
     sprintf(numParentsString, "num parents = %lu", numParents);
     sprintf(numChildrenString, "num children = %lu", numChildren);
     sprintf(numDataString, "num data = %lu", numData);
+    sprintf(maxUnattachedSizeString, "max unnatached size = %lu", maxUnattachedSize);
 }
 
+void dataCrystalsApp::formGUIStrings() {
+    if( bUseSizeColumn)
+        strcpy(sizeOnString, "use size column = true");
+    else
+        strcpy(sizeOnString, "use size column = false");
+    
+    strcpy( fileDisplayStr, "\n");
+    //(char *)csvFiles[currentFileIndex].getFileName() );
+    
+}
 
 //--------------------------------------------------------------
 void dataCrystalsApp::keyPressed(int key){
-    if( key == ' ' ) {
-        //ofToggleFullscreen();
+    if( key == 'g' ) {
         bHideGui = !bHideGui;
+        bShowClusterStatus = !bShowClusterStatus;
+    }
+    else if( key == 'f') {
+        ofToggleFullscreen();
     }
     else if( key == 's' ) {
         saveMesh();
@@ -328,7 +364,7 @@ void dataCrystalsApp::keyPressed(int key){
             applyColor();
     }
     
-    else if( key == '.' ) {
+    else if( key == '2' ) {
         // next CSV file
         currentFileIndex++;
         if( currentFileIndex == numCSVFiles )
@@ -340,7 +376,7 @@ void dataCrystalsApp::keyPressed(int key){
         bAllLoaded = false;
         
     }
-    else if( key == ',' ) {
+    else if( key == '1' ) {
         // previous CSV file
         currentFileIndex--;
         if( currentFileIndex == -1 )
@@ -352,20 +388,55 @@ void dataCrystalsApp::keyPressed(int key){
         bAllLoaded = false;
     }
     
+    //-- not supported now
+    /*
     else if( key == 'a' ) {
         loadAllData();
         bAllLoaded = true;
     }
-    else if( key == '1' ) {
+    */
+    
+    else if( key == 'r' ) {
+        if( bAllLoaded )
+            loadAllData();
+        else
+            loadCSVData(csvFiles[currentFileIndex].getFileName(), NULL, currentFileIndex );
+        
+        if( bAllLoaded && bUseColor )
+            applyColorToAll();
+        else
+            applyColor();
+    }
+    
+    //-- not supported now
+    /*
+    else if( key == 'z' ) {
+        bUseSizeColumn = !bUseSizeColumn;
+        
+        if( bAllLoaded )
+            loadAllData();
+        else
+            loadCSVData(csvFiles[currentFileIndex].getFileName(), NULL, currentFileIndex );
+        
+        if( bAllLoaded && bUseColor )
+            applyColorToAll();
+        else
+            applyColor();
+        
+        formGUIStrings();
+    }
+    */
+    
+    else if( key == ' ' ) {
         bClustering = !bClustering;
         
         // can't cluster if we are done
         if( bClustering && numUnattached == 0 && numParents == 1 )
             bClustering = false;
     }
-    else if( key == '9') {
-        bDrawClusterIDs = !bDrawClusterIDs;
-    }
+//    else if( key == '9') {
+//        bDrawClusterIDs = !bDrawClusterIDs;
+//    }
 }
 
 
@@ -428,19 +499,28 @@ unsigned long dataCrystalsApp::loadCSVData(string filename, datum *dataPtr, int 
     // start at i = 0 to skiip header
 
     float pointX, pointY, s;
-    
+    int categoryID;
     
     // 1st pass: read in CSV, set raw points
     for( unsigned long i = 1; i < csvDataRows+1; i++ ) {
         
+        categoryID = ofToInt(csv.data[i][CATEGORY_TYPE_COLUMN_NUM]);
         pointX = ofToFloat(csv.data[i][POINT_X_COLUMN_NUM]);
         pointY = ofToFloat(csv.data[i][POINT_Y_COLUMN_NUM]);
-        s = ofToFloat(csv.data[i][SIZE_COLUMN_NUM]);
-        if( s == 0 )
-            s = DEFAULT_CUBE_SIZE;
         
-        //(dataPtr+i-1)->setSize(s);
+        /*
+        if( bUseSizeColumn ) {
+            s = ofToFloat(csv.data[i][SIZE_COLUMN_NUM]);
+            if( s == 0 )
+                s = DEFAULT_CUBE_SIZE;
+            
+            (dataPtr+i-1)->setSize(s);
+        }
+        */
         
+        (dataPtr+i-1)->setCategoryType(categoryID);
+        
+        cout << "category id = " << categoryID << "\n";
         
         // index - 1 for data but [i] for CSV array since we are skipping the header
         (dataPtr+i-1)->setValues(   pointX,
@@ -591,40 +671,48 @@ void dataCrystalsApp::getColorFromFileIndex(int fileIndex, unsigned short &r, un
     r = 255; g = 255; b = 255;
     
     if( fileIndex == 0 ) {
+        // Arenas
         r = 255; g = 0; b = 0;
     }
     else if( fileIndex == 1 ) {
-        r = 0; g = 255; b = 0;
-    }
-    else if( fileIndex == 2 ) {
-        r = 0; g = 0; b = 255;
-    }
-    else if( fileIndex == 3 ) {
+        // Tennis Courts
         r = 255; g = 255; b = 0;
     }
+    else if( fileIndex == 2 ) {
+        // Community Gardens
+        r = 0; g = 255; b = 0;
+    }
+    else if( fileIndex == 3 ) {
+        // Washrooms
+        r = 255; g = 255; b = 255;
+    }
     else if( fileIndex == 4 ) {
-        r = 255; g = 255; b= 255;
+        // Pools
+        r = 0; g = 0; b= 255;
     }
     else if( fileIndex == 5) {
-        r = 255; g = 0; b= 255;
+        // Spray & Wading Pools
+        r = 255; g = 0; b= 128;
     }
     else if( fileIndex == 6) {
+        // Play Strucures
         r = 128; g = 255; b= 255;
     }
     else if( fileIndex == 7) {
+        // Swing Swets
         r = 255; g = 128; b= 128;
     }
     else if( fileIndex == 8) {
+        // Community Centers
         r = 128; g = 0; b= 160;
     }
     else if( fileIndex == 9) {
+        // Skateboard parks
         r = 45; g = 250; b= 170;
     }
     else if( fileIndex == 10) {
+        // Football fields
         r = 71; g = 128; b= 241;
-    }
-    else if( fileIndex == 11) {
-        r = 128; g = 0; b= 128;
     }
     else {
         r = 255; g = 255; b = 255;

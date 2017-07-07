@@ -24,6 +24,8 @@ datum::datum() {
     
     s = DEFAULT_CUBE_SIZE;
     
+    categoryType = 0;
+    
 }
 
 void datum::setSize( float _s  ) {
@@ -89,9 +91,11 @@ void datum::adjustValues( float xAdjust, float yAdjust, float zAdjust  ) {
     }
 }
 
-void datum::jiggle(float jigglePct, ofVec3f &gravCenter, float gravRatio) {
+void datum::jiggle(float jigglePct, int maxJiggleSize, ofVec3f &gravCenter, float gravRatio) {
     //-- move self
-    float jiggleAmount = s * jigglePct;
+    
+    int jigglesSize = (maxJiggleSize < s) ? maxJiggleSize : s;
+    float jiggleAmount = jigglesSize * jigglePct;
 
     float rxMin = -jiggleAmount;
     float rxMax = jiggleAmount;
@@ -126,10 +130,15 @@ void datum::jiggle(float jigglePct, ofVec3f &gravCenter, float gravRatio) {
     float my = ofRandom(ryMin, ryMax);
     float mz = ofRandom(rzMin, rzMax);
     
-    float gx = (gravCenter.x - x) * gravRatio/10;
-    float gy = (gravCenter.y - y) * gravRatio/10;
-    float gz = (gravCenter.z - z) * gravRatio/10;
-    adjustValues(mx+gx,my+gy,mz+gz);
+//    mx *= gravRatio/10;
+//    my *= gravRatio/10;
+//    mz *= gravRatio/10;
+    
+//    float gx = (gravCenter.x - x) * gravRatio/100;
+//    float gy = (gravCenter.y - y) * gravRatio/100;
+//    float gz = (gravCenter.z - z) * gravRatio/100;
+//    adjustValues(mx+gx,my+gy,mz+gz);
+    adjustValues(mx,my,mz);
 }
 
 bool datum::hasChildren() {
