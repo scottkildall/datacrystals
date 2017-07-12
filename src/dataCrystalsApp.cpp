@@ -18,7 +18,7 @@
 
 
 #define CLUSTER_DRAW_X  (20)            // offset from left of screen
-#define CLUSTER_DRAW_Y (160)            // offset from bottom of screen
+#define CLUSTER_DRAW_Y (200)            // offset from bottom of screen
 #define CLUSTER_DRAW_Y_INCREMENT (18)   // amount between each line
 
 //--------------------------------------------------------------
@@ -51,6 +51,11 @@ void dataCrystalsApp::setup(){
     initGui();
     
     //-- DATA
+    minDataCategory = 1;
+    maxDataCategory = 10;
+    dataCategory = minDataCategory;
+    generateTreeString();
+    
     loadCSVFiles();
     
     //-- display strings
@@ -102,7 +107,8 @@ void dataCrystalsApp::draw(){
     
     
     for( unsigned long i = 0; i < numData; i++ ) {
-        (data +i)->draw();
+        if( (data+i)->visible )
+            (data+i)->draw();
     }
 
     
@@ -155,8 +161,14 @@ void dataCrystalsApp::draw(){
 //-------------------------------------------------------------------------------------------------
 void dataCrystalsApp::makeClusters() {
     for( unsigned long i = 0; i < numData; i++ ) {
+        if( (data+i)->visible == false )
+            continue;
+        
         //-- this is unattached, so we can check all
         for( unsigned long j = 0; j < numData; j++ ) {
+            if( (data+j)->visible == false)
+                continue;
+        
             if( i == j )
                 continue;   // skip self
             
@@ -239,6 +251,7 @@ bool dataCrystalsApp::inSameCluster( datum *d1, datum *d2 ) {
 bool dataCrystalsApp::inClusterDistance( datum *d1, datum *d2 ) {
     ofVec3f v1, v2;
     
+    /*
     float totalSize = d1->getSize() + d2->getSize();
     float minClusterDist = (totalSize/2) * clusterPct;
     
@@ -247,7 +260,11 @@ bool dataCrystalsApp::inClusterDistance( datum *d1, datum *d2 ) {
         cout << "\n";
     
     minClusterDist = shortestSize * clusterPct;
-
+     */
+    
+    float minClusterDist = DEFAULT_CUBE_SIZE * clusterPct;
+    
+    
     d1->getLoc(v1);
     d2->getLoc(v2);
     
@@ -270,6 +287,9 @@ void dataCrystalsApp::countParentsAndChildren() {
     
     //-- count parents & children
     for( unsigned long i = 0; i < numData; i++ ) {
+        if( (data+i)->visible == false )
+            continue;
+        
         if( (data+i)->isUnattached() )
             maxUnattachedSize = ((data+i)->getSize() > maxUnattachedSize ) ? (data+i)->getSize() : maxUnattachedSize;
         
@@ -288,7 +308,11 @@ void dataCrystalsApp::countParentsAndChildren() {
     
     }
     
-    numUnattached = numData - (numParents + numChildren);
+    
+    numUnattached = numVisible - (numParents + numChildren);
+
+    // OLD
+    //numUnattached = numData - (numParents + numChildren);
 
 }
 void dataCrystalsApp::drawClusterStatus() {
@@ -297,6 +321,9 @@ void dataCrystalsApp::drawClusterStatus() {
     
     int drawY = ofGetScreenHeight() - CLUSTER_DRAW_Y;
     ofDrawBitmapString(numClusterCyclesStr, ofPoint(CLUSTER_DRAW_X, drawY) );
+    
+    drawY+= CLUSTER_DRAW_Y_INCREMENT;
+    ofDrawBitmapString(numVisibleString, ofPoint(CLUSTER_DRAW_X, drawY) );
     
     drawY+= CLUSTER_DRAW_Y_INCREMENT;
     ofDrawBitmapString(numUnattachedStr, ofPoint(CLUSTER_DRAW_X, drawY) );
@@ -313,9 +340,12 @@ void dataCrystalsApp::drawClusterStatus() {
     drawY += CLUSTER_DRAW_Y_INCREMENT;
     ofDrawBitmapString(maxUnattachedSizeString, ofPoint(CLUSTER_DRAW_X, drawY) );
 
-    
     drawY+= CLUSTER_DRAW_Y_INCREMENT;
     ofDrawBitmapString(sizeOnString, ofPoint(CLUSTER_DRAW_X, drawY) );
+    
+    ofSetColor(255,255,255);
+    drawY+= CLUSTER_DRAW_Y_INCREMENT;
+    ofDrawBitmapString(treeDisplayStr, ofPoint(CLUSTER_DRAW_X, drawY) );
 }
 
 
@@ -323,6 +353,7 @@ void dataCrystalsApp::drawClusterStatus() {
 
 void dataCrystalsApp::makeClusterDisplayStrings()
 {
+    sprintf(numVisibleString, "num visible = %lu", numVisible);
     sprintf(numUnattachedStr, "num unattached = %lu", numUnattached);
     sprintf(numClusterCyclesStr, "cycles = %lu", numClusterCycles);
     sprintf(numParentsString, "num parents = %lu", numParents);
@@ -341,6 +372,50 @@ void dataCrystalsApp::formGUIStrings() {
     //(char *)csvFiles[currentFileIndex].getFileName() );
     
 }
+
+void dataCrystalsApp::generateTreeString() {
+    if( bAllLoaded ) {
+        strcpy( treeDisplayStr, "All" );
+        return;
+    }
+    
+    switch(dataCategory) {
+        case 1:
+            strcpy( treeDisplayStr, "Apple" );
+            break;
+        case 2:
+            strcpy( treeDisplayStr, "Birch" );
+            break;
+        case 3:
+            strcpy( treeDisplayStr, "Cherry" );
+            break;
+        case 4:
+            strcpy( treeDisplayStr, "Cypress" );
+            break;
+        case 5:
+            strcpy( treeDisplayStr, "Elm" );
+            break;
+        case 6:
+            strcpy( treeDisplayStr, "Maple" );
+            break;
+        case 7:
+            strcpy( treeDisplayStr, "Oak" );
+            break;
+        case 8:
+            strcpy( treeDisplayStr, "Pine" );
+            break;
+        case 9:
+            strcpy( treeDisplayStr, "Poplar" );
+            break;
+        case 10:
+            strcpy( treeDisplayStr, "Willow" );
+            break;
+        default:
+            strcpy( treeDisplayStr, "Other" );
+            break;
+    }
+}
+
 
 //--------------------------------------------------------------
 void dataCrystalsApp::keyPressed(int key){
@@ -366,17 +441,45 @@ void dataCrystalsApp::keyPressed(int key){
     
     //-- scroll data by data
     if( key == '1' ) {
-        // next set of trees
+        bClustering = false;
+        
+        bAllLoaded = false;
+        
+        // previous set of trees
+        dataCategory--;
+        if(dataCategory < minDataCategory)
+            dataCategory = maxDataCategory;
+        
+        generateTreeString();
+        
+        // this will reload the entire data file, resetting the positions of everythng
+        loadCSVFiles();
         
     }
     else if( key == '2' ) {
-        // previous set of trees
+        bClustering = false;
         
+        bAllLoaded = false;
+        
+        // next set of trees
+        dataCategory++;
+        if(dataCategory > maxDataCategory)
+            dataCategory = minDataCategory;
+        
+        generateTreeString();
+        
+        // this will reload the entire data file, resetting the positions of everything
+        loadCSVFiles();
     }
     
     else if( key == 'a' ) {
-        // all trees
+        bClustering = false;
+        bAllLoaded = true;
+        
+        // this will reload the entire data file, resetting the positions of everything
         loadCSVFiles();
+        
+        generateTreeString();
     }
 
     
@@ -486,6 +589,7 @@ unsigned long dataCrystalsApp::loadCSVData(string filename, datum *dataPtr, int 
     float latTotal = 0;
     float lngTotal = 0;
     float heightTotal = 0;
+    numVisible = 0;
     
     loadedFilename = filename;
 
@@ -516,7 +620,7 @@ unsigned long dataCrystalsApp::loadCSVData(string filename, datum *dataPtr, int 
     
     // start at i = 0 to skip header
 
-    float pointX, pointY, s;
+    float pointX, pointY, pointZ, s;
     int categoryID;
     unsigned short r,g,b;
     
@@ -541,10 +645,15 @@ unsigned long dataCrystalsApp::loadCSVData(string filename, datum *dataPtr, int 
         
         //cout << "category id = " << categoryID << "\n";
         
+        if( bAllLoaded )
+            pointZ = categoryID * 1000;
+        else
+            pointZ = 0;
+        
         // index - 1 for data but [i] for CSV array since we are skipping the header
         (dataPtr+i-1)->setValues(   pointX,
                                     pointY,
-                                    categoryID * 1000,
+                                    pointZ,
                                     xScale/20.0f,
                                     xScale/20.0f,
                                     zScale/20.f);
@@ -552,6 +661,21 @@ unsigned long dataCrystalsApp::loadCSVData(string filename, datum *dataPtr, int 
         //-- use categoryIDs instead of colors
         getColorFromFileIndex(categoryID,r,g,b);
         (dataPtr+i-1)->setColor(r,g,b);
+        
+        //-- turn off visibilty of those not in category
+        if( bAllLoaded == false  ) {
+            if( categoryID == dataCategory ) {
+                (dataPtr+i-1)->visible = true;
+                numVisible++;
+            }
+            else {
+                (dataPtr+i-1)->visible = false;
+            }
+        }
+        else {
+            (dataPtr+i-1)->visible = true;
+            numVisible++;
+        }
     }
     
     csv.clear();
@@ -766,8 +890,10 @@ void dataCrystalsApp::saveMesh() {
 
     stlExporter.beginModel("dataCrystal");
     
-    for( unsigned long i = 0; i < numData; i++ )
-        (data+i)->save(stlExporter);
+    for( unsigned long i = 0; i < numData; i++ ) {
+        if( (data+i)->visible )
+            (data+i)->save(stlExporter);
+    }
     
     stlExporter.useASCIIFormat(false); //export as binary
     stlExporter.saveModel(ofToDataPath("outputs/dataCrystal.stl"));

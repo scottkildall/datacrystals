@@ -25,7 +25,7 @@ datum::datum() {
     s = DEFAULT_CUBE_SIZE;
     
     categoryType = 0;
-    
+    visible = true;
 }
 
 void datum::setSize( float _s  ) {

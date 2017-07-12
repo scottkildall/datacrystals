@@ -40,12 +40,16 @@ class dataCrystalsApp : public ofBaseApp{
         // data points
         datum *data;
         unsigned long numData = 0;
+        unsigned long numVisible;
         unsigned short nextClusterID;
         int maxUnattachedSize;
         bool bDrawClusterIDs;
         bool bUseColor;
         bool bAllLoaded;
         bool bUseSizeColumn;
+        int dataCategory;
+        int minDataCategory;
+        int maxDataCategory;
     
         ofVec3f gravCenter;
     private:
@@ -120,6 +124,8 @@ class dataCrystalsApp : public ofBaseApp{
         ofxButton applyButton;
         void applyButtonHit();
     
+    void generateTreeString();
+    
         // UTILITY
         void getColorFromFileIndex(int currentFileIndex, unsigned short &r, unsigned short &b, unsigned short &g);
         void applyColor();
@@ -129,14 +135,16 @@ class dataCrystalsApp : public ofBaseApp{
         void drawClusterStatus();
         void makeClusterDisplayStrings();
         void formGUIStrings();
-    
+        
         char numClusterCyclesStr[64];
         char numUnattachedStr[64];
         char numParentsString[64];
         char numChildrenString[64];
         char numDataString[64];
+        char numVisibleString[64];
         char clusterString[64];
         char maxUnattachedSizeString[64];
         char sizeOnString[64];
         char fileDisplayStr[64];
+        char treeDisplayStr[64];
 };

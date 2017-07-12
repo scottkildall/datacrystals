@@ -31,6 +31,7 @@ public:
     
     //-- our unique ID number, public var for easier syntax
     unsigned long id;
+    bool visible;
     
     //-- size of cube (edge)
     void setSize( float _s  );
